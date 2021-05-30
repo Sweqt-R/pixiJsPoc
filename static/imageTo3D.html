@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image to 3D</title>
+    <script src="lib/pixi.min.js"></script>
+    <link rel="stylesheet" href="css/waterPage.css">
+    <script>
+        let app;
+        let img;
+
+        window.onload = function () {
+            createApp();
+            document.querySelector("#mainDiv").appendChild(app.view);
+
+            img = new PIXI.Sprite.from("images/3dimage/char.jpg");
+            img.width = window.innerWidth;
+            img.height = window.innerHeight;
+
+            app.stage.addChild(img);
+
+            depthMap = new PIXI.Sprite.from("images/3dimage/depth.png");
+            depthMap.width = window.innerWidth;
+            depthMap.height = window.innerHeight;
+            app.stage.addChild(depthMap);
+
+            displacementFilter = new PIXI.filters.DisplacementFilter(depthMap);
+            app.stage.filters = [displacementFilter];
+
+            setTimeout(function(){
+                disclaimer();
+            }, 1000);
+
+            window.onmousemove = function (e) {
+                displacementFilter.scale.x = (window.innerWidth / 2 - e.clientX) / 20;
+                displacementFilter.scale.y = (window.innerWidth / 2 - e.clientY) / 20;
+            }
+
+        }
+
+        function createApp() {
+            app = new PIXI.Application(
+                {
+                    width: window.innerWidth,
+                    height: window.innerHeight
+                }
+            );
+        }
+
+        function disclaimer() {
+            window.alert("Disclaimer : I'm not good with Photoshop so the result might not be INSANE.... Anyway, move your mouse to see a 3D version of the image ;)");
+        }
+    </script>
+
+</head>
+
+<body>
+    <div id="mainDiv"></div>
+</body>
+
+</html>

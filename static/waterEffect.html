@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Water Effect</title>
+    <script src="lib/pixi.min.js"></script>
+    <link rel="stylesheet" href="css/waterPage.css">
+    <script>
+        let app;
+        let oceanImg;
+
+        window.onload = function () {
+            createApp();
+            document.querySelector("#mainDiv").appendChild(app.view);
+
+            oceanImg = new PIXI.Sprite.from("images/watereffect/ocean.jpg");
+            oceanImg.width = window.innerWidth;
+            oceanImg.height = window.innerHeight;
+
+            app.stage.addChild(oceanImg);
+
+            displacementSprite = new PIXI.Sprite.from("images/watereffect/cloud.png");
+            displacementFilter = new PIXI.filters.DisplacementFilter(displacementSprite);
+            displacementSprite.texture.baseTexture.wrapMode = PIXI.WRAP_MODES.REPEAT;
+
+            app.stage.addChild(displacementSprite);
+            app.stage.filters = [displacementFilter];
+
+            animate();
+        }
+
+        function animate() {
+            displacementSprite.x += 4;
+            displacementSprite.y += 2;
+            requestAnimationFrame(animate);
+        }
+        
+        function displacementAction(e){
+            let pos = e.data.global;
+
+            displacementSprite.x = pos.x;
+            displacementSprite.y = pos.y;
+        }
+
+        function createApp() {
+            app = new PIXI.Application(
+                {
+                    width: window.innerWidth,
+                    height: window.innerHeight
+                }
+            );
+        }
+    </script>
+
+</head>
+
+<body>
+    <div id="mainDiv"></div>
+</body>
+
+</html>

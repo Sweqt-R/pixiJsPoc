@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css"
+        integrity="sha384-TX8t27EcRE3e/ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2" crossorigin="anonymous">
+    <link rel="stylesheet" href="css/styles.css">
+    <title>Water Effect Features</title>
+</head>
+
+<body>
+    <header class="bg-dark text-white">
+        <div class="container p-4 text-center">
+            <h1>Detailing features</h1>
+            <p class="lead">We'll take a deeper look at how the water effect is created</p>
+            <a class="btn btn-lg btn-light" id="hoverpixicolor" href="index.html">Back to main page</a>
+        </div>
+    </header>
+
+    <!-- Depth map -->
+    <section>
+        <div class="container p-4 my-5 text-center border-bottom border-gray">
+            <h2 class="text-dark">Creating the depth map</h2>
+            <div class="d-flex align-items-center">
+                <div class="imgZoomContainer">
+                    <input type="checkbox" id="zoomCheck">
+                    <label for="zoomCheck">
+                        <img src="images/watereffect/cloud.png" alt="Depth map" style="width:500px;" class="m-5">
+                    </label>
+                </div>
+
+                <p class="text-left">This will be the base of our displacement filter<br>
+                    We will put this filter on top of the base image and animate it to create the effect
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Code -->
+    <section>
+        <div class="container p-4 my-5 text-center border-bottom border-gray">
+            <h2 class="text-dark">The code</h2>
+            <div class="d-flex align-items-center">
+                <div class="imgZoomContainer">
+                    <input type="checkbox" id="zoomCheckGif">
+                    <label for="zoomCheckGif">
+                        <img src="images/resources/displacementWater.png" alt="displacement code" style="width:500px;" class="m-5">
+                    </label>
+                </div>
+                <p class="text-left">First we create a <b>displacement sprite</b> containing our depth map <br>
+                    Then we create a <b>displacement filter</b> with this sprite <br>
+                    Finally, we animate the sprite every frame to create the wavy effect
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Result -->
+    <section>
+        <div class="container p-4 my-5 text-center border-bottom border-gray">
+            <h2 class="text-dark">And voilà !</h2>
+                <div class="imgZoomContainer">
+                    <input type="checkbox" id="zoomCheckGifWater">
+                    <label for="zoomCheckGifWater">
+                        <img src="images/resources/water.gif" alt="water gif" style="width:500px;" class="m-5">
+                    </label>
+                </div>
+        </div>
+    </section>
+
+</body>
+
+</html>

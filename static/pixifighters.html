@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Best Game Ever</title>
+    <style>
+        @font-face {
+            font-family: "Cod";
+            src: url("fonts/cod.otf");
+        }
+
+        @font-face {
+            font-family: "Arcade";
+            src: url("fonts/ARCADECLASSIC.TTF");
+        }
+
+        #useFont {
+            font-family: "Cod";
+            font-size: 0pt;
+        }
+        #useFont2 {
+            font-family: "Arcade";
+            font-size: 0pt;
+        }
+    </style>
+    <script src="lib/pixi.min.js"></script>
+    <script>
+
+        let app;
+
+        let player;
+        let playerSpeed = 5;
+        let playerSpriteSheet = {};
+        let shootingSpriteSheet = {};
+
+        let enemys = [];
+        let enemySpeed = 4;
+        let enemySpriteSheet = {};
+        let enemySpawningInterval;
+        let enemySpawningFrequency;
+
+        let keys = {};
+
+        let bullets = [];
+        let bulletSpeed = 10;
+
+        let menuScreen;
+        let easyBtn;
+        let hardBtn;
+        let difficulty = "easy";
+
+        let pauseScreen;
+        let isPaused = false;
+
+        let loseScreen;
+        let isLost = false;
+        let score = 0;
+        let scoreText;
+
+        let bgX = 0;
+        let bgSpeed = 0.5;
+
+        window.onload = function () {
+            // Create PIXI App
+            createApp();
+
+            // Add app to DOM
+            document.querySelector("#gameDiv").appendChild(app.view);
+
+            // Pre loading assets
+            app.loader
+                .add("player_fly1", "images/player/player_fly1.png")
+                .add("player_fly2", "images/player/player_fly2.png")
+                .add("enemy_fly1", "images/enemy/enemy_fly1.png")
+                .add("enemy_fly2", "images/enemy/enemy_fly2.png")
+                .add("bullet", "images/assets/bullet0.png")
+                .add("shoot1", "images/player/shoot/shoot1.png")
+                .add("shoot2", "images/player/shoot/shoot2.png")
+                .add("shoot3", "images/player/shoot/shoot3.png")
+                .add("shoot4", "images/player/shoot/shoot4.png")
+                .add("shoot5", "images/player/shoot/shoot5.png")
+                .add("box_wide", "images/pauseScreen/box_wide.png")
+                .add("boxShape", "images/pauseScreen/pauseBox.png")
+                .add("bg_menu", "images/assets/mountain/mountain_bg_light.png")
+                .add("arrows", "images/assets/arrows.png")
+                .add("bar", "images/assets/bar.png")
+                .add("cloud_lonely", "images/assets/mountain/parallax/cloud_lonely.png")
+                .add("cloud_bg", "images/assets/mountain/parallax/clouds_bg.png")
+                .add("cloud_mg_1", "images/assets/mountain/parallax/clouds_mg_1.png")
+                .add("cloud_mg_2", "images/assets/mountain/parallax/clouds_mg_2.png")
+                .add("cloud_mg_3", "images/assets/mountain/parallax/clouds_mg_3.png")
+                .add("gml", "images/assets/mountain/parallax/glacial_mountains_lightened.png")
+                .add("sky", "images/assets/mountain/parallax/sky_lightened.png")
+                .add("box_wide_pressed", "images/pauseScreen/box_wide_pressed.png");
+
+            // Triggers when pre loading is complete
+            app.loader.load(doneLoading);
+
+            // Keyboard event handlers
+            window.addEventListener("keydown", keysDown);
+            window.addEventListener("keyup", keysUp);
+
+            document.body.onkeyup = function (e) {
+                if (e.keyCode == 32 && !isLost) {
+                    fireBullet();
+                }
+                if (e.keyCode == 16 && playerSpeed != 0) {
+                    playerSpeed = 5;
+                }
+
+                // Pause on p
+                if (e.keyCode == 80) {
+                    if (!isPaused) {
+                        app.ticker.remove(gameLoop);
+                        clearInterval(enemySpawningInterval);
+                        pauseScreenPop();
+                    }
+                    else {
+                        resume();
+                    }
+                }
+            }
+
+            document.body.onkeydown = function (e) {
+                if (e.keyCode == 16) {
+                    boostPlayerSpeed();
+                }
+            }
+        }
+
+        function createApp() {
+            app = new PIXI.Application(
+                {
+                    width: 1600,
+                    height: 800,
+                    backgroundColor: 0xAAAAAA
+                }
+            );
+        }
+
+        function doneLoading(e) {
+            createMainMenu();
+        }
+
+        function createMainMenu() {
+            menuScreen = new PIXI.Container();
+            menuBG = createMainBackGround(app.loader.resources.bg_menu.texture)
+            app.stage.addChild(menuBG);
+
+            let mainMenuContainer = new PIXI.Container();
+            let playBtn = new PIXI.Sprite.from(app.loader.resources.box_wide.texture);
+            playBtn.anchor.set(0.5);
+            playBtn.x = app.view.width / 2;
+            playBtn.y = app.view.height / 4;
+            playBtn.width = 300;
+            playBtn.height = 150;
+
+            let playText = new PIXI.Text("Play");
+            playText.anchor.set(0.5);
+            playText.x = app.view.width / 2;
+            playText.y = app.view.height / 4;
+            playText.style = new PIXI.TextStyle({
+                fill: 0xEE6F16,
+                fontSize: 56,
+                fontFamily: "Cod",
+                stroke: 0x141414,
+                strokeThickness: 2
+            });
+
+
+            playBtn.interactive = true;
+            playBtn.on("mousedown", function () {
+                app.stage.removeChild(menuBG);
+                startGame();
+            });
+
+            easyBtn = new PIXI.Sprite.from(app.loader.resources.box_wide_pressed.texture);
+            easyBtn.anchor.set(0.5);
+            easyBtn.x = app.view.width / 2;
+            easyBtn.y = app.view.height / 2;
+            easyBtn.width = 300;
+            easyBtn.height = 150;
+
+            easyBtn.interactive = true;
+            easyBtn.on("mousedown", function () {
+                setDifficulty("easy")
+            });
+
+            let easyText = new PIXI.Text("Easy");
+            easyText.anchor.set(0.5);
+            easyText.x = app.view.width / 2;
+            easyText.y = app.view.height / 2;
+            easyText.style = new PIXI.TextStyle({
+                fill: 0xEE6F16,
+                fontSize: 56,
+                fontFamily: "Cod",
+                stroke: 0x141414,
+                strokeThickness: 2
+            });
+
+            hardBtn = new PIXI.Sprite.from(app.loader.resources.box_wide.texture);
+            hardBtn.anchor.set(0.5);
+            hardBtn.x = app.view.width / 2;
+            hardBtn.y = app.view.height / 2 + 200;
+            hardBtn.width = 300;
+            hardBtn.height = 150;
+
+            hardBtn.interactive = true;
+            hardBtn.on("mousedown", function () {
+                setDifficulty("hard");
+            });
+
+            let hardText = new PIXI.Text("Hard");
+            hardText.anchor.set(0.5);
+            hardText.x = app.view.width / 2;
+            hardText.y = app.view.height / 2 + 200;
+            hardText.style = new PIXI.TextStyle({
+                fill: 0xEE6F16,
+                fontSize: 56,
+                fontFamily: "Cod",
+                stroke: 0x141414,
+                strokeThickness: 2
+            });
+
+            mainMenuContainer.addChild(easyBtn);
+            mainMenuContainer.addChild(hardBtn);
+            mainMenuContainer.addChild(playBtn);
+
+            let arrows = new PIXI.Sprite.from(app.loader.resources.arrows.texture);
+            arrows.anchor.set(0.5);
+            arrows.x = app.view.width - 300;
+            arrows.y = app.view.height - 450;
+
+            let moveText = new PIXI.Text("Move");
+            moveText.anchor.set(0.5);
+            moveText.x = app.view.width - 500;
+            moveText.y = app.view.height - 450;
+            moveText.style = new PIXI.TextStyle({
+                fill: 0xEE6F16,
+                fontSize: 42,
+                fontFamily: "Cod",
+                stroke: 0x141414,
+                strokeThickness: 2
+            });
+            mainMenuContainer.addChild(moveText);
+
+
+            let spacebar = new PIXI.Sprite.from(app.loader.resources.bar.texture);
+            spacebar.anchor.set(0.5);
+            spacebar.x = app.view.width - 300;
+            spacebar.y = app.view.height - 300;
+            spacebar.width = 400;
+            spacebar.height = 50;
+
+            let shootText = new PIXI.Text("Shoot");
+            shootText.anchor.set(0.5);
+            shootText.x = app.view.width - 570;
+            shootText.y = app.view.height - 300;
+            shootText.style = new PIXI.TextStyle({
+                fill: 0xEE6F16,
+                fontSize: 42,
+                fontFamily: "Cod",
+                stroke: 0x141414,
+                strokeThickness: 2
+            });
+            mainMenuContainer.addChild(shootText);
+
+            let pauseText = new PIXI.Text("Press P to Pause");
+            pauseText.anchor.set(0.5);
+            pauseText.x = app.view.width - 300;
+            pauseText.y = app.view.height - 150;
+            pauseText.style = new PIXI.TextStyle({
+                fill: 0xEE6F16,
+                fontSize: 42,
+                fontFamily: "Cod",
+                stroke: 0x141414,
+                strokeThickness: 2
+            });
+            mainMenuContainer.addChild(pauseText);
+
+            let enemyPic = new PIXI.Sprite.from(app.loader.resources.enemy_fly1.texture);
+            enemyPic.anchor.set(0.5)
+            enemyPic.x = 250;
+            enemyPic.y = app.view.height / 2 + 100;
+            enemyPic.height = 100;
+            enemyPic.width = 150;
+            mainMenuContainer.addChild(enemyPic);
+
+            let instructionText = new PIXI.Text("Shoot enemy flights");
+            instructionText.anchor.set(0.5);
+            instructionText.x = 250;
+            instructionText.y = app.view.height / 2 - 50;
+            instructionText.style = new PIXI.TextStyle({
+                fill: 0xEE6F16,
+                fontSize: 42,
+                fontFamily: "Cod",
+                stroke: 0x141414,
+                strokeThickness: 2
+            });
+
+            let titleText = new PIXI.Text("PIXI  FIGHTERS");
+            titleText.anchor.set(0.5);
+            titleText.x = app.view.width / 2;
+            titleText.y = 80;
+            titleText.style = new PIXI.TextStyle({
+                fill: 0xEE6F16,
+                fontSize: 86,
+                fontFamily: "Arcade",
+                stroke: 0x000000,
+                strokeThickness: 4
+            });
+
+
+            mainMenuContainer.addChild(titleText);
+            mainMenuContainer.addChild(playText);
+            mainMenuContainer.addChild(easyText);
+            mainMenuContainer.addChild(hardText);
+            mainMenuContainer.addChild(instructionText);
+
+            mainMenuContainer.addChild(spacebar);
+            mainMenuContainer.addChild(arrows);
+
+            menuScreen.addChild(mainMenuContainer);
+            app.stage.addChild(menuScreen);
+        }
+
+        function setDifficulty(mode) {
+            let btnPressedTexture = new PIXI.Texture.from("images/pauseScreen/box_wide_pressed.png");
+            let defaultTexture = new PIXI.Texture.from("images/pauseScreen/box_wide.png");
+
+
+            switch (mode) {
+                case "easy":
+                    easyBtn.texture = btnPressedTexture;
+                    hardBtn.texture = defaultTexture;
+                    difficulty = "easy";
+                    break;
+                case "hard":
+                    easyBtn.texture = defaultTexture;
+                    hardBtn.texture = btnPressedTexture;
+                    difficulty = "hard";
+                    break;
+            }
+        }
+
+        function createMainBackGround(texture) {
+            let tiling = new PIXI.TilingSprite(texture, 384, 216);
+            tiling.position.set(0, 0);
+            tiling.scale.x = 4.5;
+            tiling.scale.y = 4;
+
+            return tiling;
+        }
+
+        function startGame() {
+            menuScreen.visible = false;
+            // 0 = furthest one, 5 = closest one
+            bgBack0 = createMainBackGround(app.loader.resources["sky"].texture);
+            bgBackOpt = createMainBackGround(app.loader.resources["cloud_lonely"].texture);
+            bgBack1 = createMainBackGround(app.loader.resources["cloud_bg"].texture);
+            bgBack2 = createMainBackGround(app.loader.resources["gml"].texture);
+            bgBack3 = createMainBackGround(app.loader.resources["cloud_mg_3"].texture);
+            bgBack4 = createMainBackGround(app.loader.resources["cloud_mg_2"].texture);
+            bgBack5 = createMainBackGround(app.loader.resources["cloud_mg_1"].texture);
+
+            app.ticker.add(gameLoop);
+
+            app.stage.addChild(bgBack0);
+            app.stage.addChild(bgBack1);
+            app.stage.addChild(bgBack2);
+            app.stage.addChild(bgBack3);
+            app.stage.addChild(bgBack4);
+            app.stage.addChild(bgBack5);
+
+
+            createUi();
+            setupDifficulty();
+
+            createPauseScreen();
+
+            createPlayerSpriteSheet()
+            createPlayer();
+
+            createShootingSpriteSheet();
+
+            createEnemySpriteSheet();
+            spawnEnemys();
+            createLoseScreen();
+
+        }
+
+        function createUi() {
+            scoreText = new PIXI.Text("Score " + score);
+            scoreText.x = 50;
+            scoreText.y = 50;
+            scoreText.style = new PIXI.TextStyle({
+                fill: 0xEE6F16,
+                fontSize: 42,
+                fontFamily: "Cod",
+                stroke: 0x141414,
+                strokeThickness: 2
+            });
+
+            app.stage.addChild(scoreText);
+        }
+
+        function setupDifficulty() {
+            switch (difficulty) {
+                case "easy":
+                    enemySpeed = 4;
+                    enemySpawningFrequency = 1500;
+                    break;
+                case "hard":
+                    enemySpeed = 6;
+                    enemySpawningFrequency = 1000;
+                    break;
+            }
+        }
+
+        function createLoseScreen() {
+            loseScreen = new PIXI.Container();
+            loseScreen.visible = false;
+            app.stage.addChild(loseScreen);
+
+            loseBox = new PIXI.Sprite.from(app.loader.resources.boxShape.texture);
+            loseBox.anchor.set(0.5);
+            loseBox.x = app.view.width / 2;
+            loseBox.y = app.view.height / 2;
+            loseBox.width = 800;
+            loseBox.height = 700;
+            loseScreen.addChild(loseBox);
+
+            loseBoxTextStyle = new PIXI.TextStyle({
+                fill: 0x000000,
+                fontSize: 64,
+                fontFamily: "Cod",
+                stroke: 0xFFFFFF,
+                strokeThickness: 2
+            });
+
+            let loseText = new PIXI.Text("You lose");
+            loseText.anchor.set(0.5);
+            loseText.x = app.view.width / 2;
+            loseText.y = app.view.height / 4;
+            loseText.style = loseBoxTextStyle;
+            loseScreen.addChild(loseText);
+
+
+            let retryBtnContainer = new PIXI.Container();
+            let retryBtn = new PIXI.Sprite.from(app.loader.resources.box_wide.texture);
+            retryBtn.anchor.set(0.5);
+            retryBtn.x = app.view.width / 2;
+            retryBtn.y = app.view.height / 2 + 150;
+            retryBtn.width = 300;
+            retryBtn.height = 150;
+
+            retryBtn.interactive = true;
+            retryBtn.on("mousedown", retry);
+
+            retryBtnContainer.addChild(retryBtn);
+
+            let retryText = new PIXI.Text("Retry");
+            retryText.anchor.set(0.5);
+            retryText.x = app.view.width / 2;
+            retryText.y = app.view.height / 2 + 150;
+            retryText.style = new PIXI.TextStyle({
+                fill: 0xEE6F16,
+                fontSize: 48,
+                fontFamily: "Cod",
+                stroke: 0x141414,
+                strokeThickness: 2
+            });
+            retryBtnContainer.addChild(retryText);
+
+            loseScreen.addChild(retryBtnContainer);
+        }
+
+
+        function loseScreenPop() {
+            for (let i = 0; i < enemys.length; i++) {
+                app.stage.removeChild(enemys[i]);
+
+            }
+            let finalScoreText = new PIXI.Text("Score :" + score);
+            finalScoreText.anchor.set(0.5);
+            finalScoreText.x = app.view.width / 2;
+            finalScoreText.y = app.view.height / 4 + 150;
+            finalScoreText.style = loseBoxTextStyle;
+            loseScreen.addChild(finalScoreText);
+
+            loseScreen.visible = true;
+            isLost = true;
+            player.stop();
+            for (let index = 0; index < enemys.length; index++) {
+                enemys[index].stop();
+            }
+        }
+
+        function retry() {
+            document.location.reload();
+        }
+
+        function createPauseScreen() {
+            pauseScreen = new PIXI.Container();
+            pauseScreen.visible = false;
+            app.stage.addChild(pauseScreen);
+
+            pauseBox = new PIXI.Sprite.from(app.loader.resources.boxShape.texture);
+            pauseBox.anchor.set(0.5);
+            pauseBox.x = app.view.width / 2;
+            pauseBox.y = app.view.height / 2;
+            pauseBox.width = 800;
+            pauseBox.height = 700;
+            pauseScreen.addChild(pauseBox);
+
+
+            let text1 = new PIXI.Text("Game Paused");
+            text1.anchor.set(0.5);
+            text1.x = app.view.width / 2;
+            text1.y = app.view.height / 4;
+            text1.style = new PIXI.TextStyle({
+                fill: 0x000000,
+                fontSize: 64,
+                fontFamily: "Cod",
+                stroke: 0xFFFFFF,
+                strokeThickness: 2
+            });
+            pauseScreen.addChild(text1);
+
+            // Continue
+            let continueBtnContainer = new PIXI.Container();
+            let continueBtn = new PIXI.Sprite.from(app.loader.resources.box_wide.texture);
+            continueBtn.anchor.set(0.5);
+            continueBtn.x = app.view.width / 2 - 150;
+            continueBtn.y = app.view.height / 2 + 150;
+            continueBtn.width = 300;
+            continueBtn.height = 150;
+
+            continueBtn.interactive = true;
+            continueBtn.on("mousedown", resume);
+
+            continueBtnContainer.addChild(continueBtn);
+
+            let continueText = new PIXI.Text("Continue");
+            continueText.anchor.set(0.5);
+            continueText.x = app.view.width / 2 - 155;
+            continueText.y = app.view.height / 2 + 150;
+            continueText.style = new PIXI.TextStyle({
+                fill: 0xEE6F16,
+                fontSize: 48,
+                fontFamily: "Cod",
+                stroke: 0x141414,
+                strokeThickness: 2
+            });
+            continueBtnContainer.addChild(continueText);
+
+            // Quit
+            let quitBtnContainer = new PIXI.Container();
+            let quitBtn = new PIXI.Sprite.from(app.loader.resources.box_wide.texture);
+            quitBtn.anchor.set(0.5);
+            quitBtn.x = app.view.width / 2 + 155;
+            quitBtn.y = app.view.height / 2 + 150;
+            quitBtn.width = 300;
+            quitBtn.height = 150;
+
+            quitBtn.interactive = true;
+            quitBtn.on("mousedown", quit);
+
+            quitBtnContainer.addChild(quitBtn);
+
+            let quitText = new PIXI.Text("Quit");
+            quitText.anchor.set(0.5);
+            quitText.x = app.view.width / 2 + 150;
+            quitText.y = app.view.height / 2 + 150;
+            quitText.style = new PIXI.TextStyle({
+                fill: 0xEE6F16,
+                fontSize: 48,
+                fontFamily: "Cod",
+                stroke: 0x141414,
+                strokeThickness: 2
+            });
+            quitBtnContainer.addChild(quitText);
+
+            pauseScreen.addChild(continueBtnContainer);
+            pauseScreen.addChild(quitBtnContainer);
+
+        }
+
+        function pauseScreenPop() {
+            pauseScreen.visible = true;
+            isPaused = true;
+            player.stop();
+            for (let index = 0; index < enemys.length; index++) {
+                enemys[index].stop();
+            }
+            // enemy.stop();
+        }
+
+        function resume() {
+            pauseScreen.visible = false;
+            isPaused = false;
+            player.play();
+            for (let index = 0; index < enemys.length; index++) {
+                enemys[index].play();
+            }
+            // enemy.play();
+            spawnEnemys();
+            app.ticker.add(gameLoop);
+        }
+
+        function quit() {
+            document.location.reload();
+        }
+
+        function createPlayerSpriteSheet() {
+            let flySheet = new PIXI.BaseTexture.from(app.loader.resources["player_fly1"].url);
+            let flySheet2 = new PIXI.BaseTexture.from(app.loader.resources["player_fly2"].url);
+
+            playerSpriteSheet["fly"] = [
+                new PIXI.Texture(flySheet),
+                new PIXI.Texture(flySheet2)
+            ]
+        }
+
+        function createShootingSpriteSheet() {
+            let shootSheet1 = new PIXI.BaseTexture.from(app.loader.resources["shoot1"].url);
+            let shootSheet2 = new PIXI.BaseTexture.from(app.loader.resources["shoot2"].url);
+            let shootSheet3 = new PIXI.BaseTexture.from(app.loader.resources["shoot3"].url);
+            let shootSheet4 = new PIXI.BaseTexture.from(app.loader.resources["shoot4"].url);
+            let shootSheet5 = new PIXI.BaseTexture.from(app.loader.resources["shoot5"].url);
+
+            shootingSpriteSheet["shoot"] = [
+                new PIXI.Texture(shootSheet1),
+                new PIXI.Texture(shootSheet2),
+                new PIXI.Texture(shootSheet3),
+                new PIXI.Texture(shootSheet4),
+                new PIXI.Texture(shootSheet5)
+            ]
+        }
+
+        function createEnemySpriteSheet() {
+            let flySheet = new PIXI.BaseTexture.from(app.loader.resources["enemy_fly1"].url);
+            let flySheet2 = new PIXI.BaseTexture.from(app.loader.resources["enemy_fly2"].url);
+
+            enemySpriteSheet["fly"] = [
+                new PIXI.Texture(flySheet),
+                new PIXI.Texture(flySheet2)
+            ]
+        }
+
+        function keysDown(event) {
+            keys[event.keyCode] = true;
+        }
+
+        // haut : 38, droite : 39, bas : 40, gauche: 37, Z: 90, Q: 81, S: 83, D: 68
+        function keysUp(event) {
+            keys[event.keyCode] = false;
+        }
+
+        function fireBullet() {
+            let bullet = createBullet();
+            bullets.push(bullet);
+
+        }
+
+        function boostPlayerSpeed() {
+            if (playerSpeed != 0) {
+                playerSpeed = 12;
+            }
+        }
+
+        function createBullet() {
+            let bullet = new PIXI.Sprite.from("images/assets/bullet0.png");
+            bullet.anchor.set(0.5);
+            bullet.x = player.x + 25;
+            bullet.y = player.y + 13;
+            bullet.speed = bulletSpeed;
+
+            app.stage.addChild(bullet);
+
+            playerSetShootingSprite();
+
+            return bullet;
+        }
+
+        function updateBullets(delta) {
+            for (let i = 0; i < bullets.length; i++) {
+                bullets[i].position.x += bullets[i].speed;
+
+                if ((bullets[i].position.x > app.view.width)) {
+                    bullets[i].dead = true;
+                }
+
+                for (let j = 0; j < enemys.length; j++) {
+                    if (collisionDetection(bullets[i], enemys[j])) {
+                        bullets[i].dead = true;
+                        enemys[j].dead = true;
+                        score += 50;
+                        scoreText.text = "Score " + score;
+                    }
+                }
+            }
+
+            for (let i = 0; i < bullets.length; i++) {
+                if (bullets[i].dead) {
+                    app.stage.removeChild(bullets[i]);
+                    bullets.splice(i, 1);
+                }
+            }
+
+        }
+
+        function updateEnemys(delta) {
+            for (let i = 0; i < enemys.length; i++) {
+                if (enemys[i].dead) {
+                    app.stage.removeChild(enemys[i]);
+                    enemys.splice(i, 1);
+                }
+                else {
+                    if (enemys[i].x < 0) {
+                        app.stage.removeChild(enemys[i]);
+                        enemys.splice(i, 1);
+                    }
+                    if (collisionDetection(player, enemys[i])) {
+                        playerSpeed = 0;
+                        enemySpeed = 0;
+                        bgSpeed = 0;
+                        loseScreenPop();
+                    }
+                    enemys[i].x -= enemySpeed;
+                }
+            }
+        }
+
+
+        function collisionDetection(a, b) {
+            let aBox = a.getBounds();
+            let bBox = b.getBounds();
+
+            return aBox.x + aBox.width > bBox.x &&
+                aBox.x < bBox.x + bBox.width &&
+                aBox.y + aBox.height > bBox.y &&
+                aBox.y < bBox.y + bBox.height;
+        }
+
+        function gameLoop(delta) {
+            // move backgrounds for parallax effect
+            updateBg();
+
+            // right
+            if ((keys["39"] || keys["68"]) && player.x + 16 < app.view.width) {
+                player.x += playerSpeed;
+            }
+
+            // left
+            if ((keys["37"] || keys["81"]) && player.x - 16 > 0) {
+                player.x -= playerSpeed;
+            }
+
+            // up
+            if ((keys["38"] || keys["90"]) && player.y - 16 > 0) {
+                player.y -= playerSpeed;
+            }
+
+            // down
+            if ((keys["40"] || keys["83"]) && player.y + 16 < app.view.height) {
+                player.y += playerSpeed;
+            }
+
+            updateBullets(delta);
+            updateEnemys(delta);
+
+        }
+
+        function updateBg() {
+            bgX = (bgX - bgSpeed);
+            bgBack0.tilePosition.x = bgX;
+            bgBack1.tilePosition.x = bgX / 2;
+            bgBack2.tilePosition.x = bgX / 4;
+            bgBack3.tilePosition.x = bgX / 6;
+            bgBack4.tilePosition.x = bgX / 8;
+            bgBack5.tilePosition.x = bgX / 10;
+        }
+
+        function createPlayer() {
+            player = new PIXI.AnimatedSprite(playerSpriteSheet.fly);
+            player.anchor.set(0.5);
+            player.animationSpeed = .2;
+            player.x = 50;
+            player.y = app.view.height / 2;
+            app.stage.addChild(player);
+            player.play();
+        }
+
+        function movePlayer(event) {
+            let pos = event.data.global;
+            player.x = pos.x;
+            player.y = pos.y;
+        }
+
+        function playerSetShootingSprite() {
+            player.textures = shootingSpriteSheet.shoot;
+            player.animationSpeed = .5;
+            player.play();
+            player.loop = false;
+
+            setTimeout(function () {
+                revertToDefaultPlayerSprite();
+            }, 100);
+        }
+
+        function revertToDefaultPlayerSprite() {
+            player.textures = playerSpriteSheet.fly;
+            player.animationSpeed = .2;
+            player.play();
+            player.loop = true;
+        }
+
+
+
+        function createEnemy() {
+            enemy = new PIXI.AnimatedSprite(enemySpriteSheet.fly);
+            enemy.anchor.set(0.5);
+            enemy.animationSpeed = .2;
+            enemy.x = app.view.width + 60;
+            enemy.y = getRndInteger(50, app.view.height - 50);
+            // enemy.y = app.view.height;
+            app.stage.addChild(enemy);
+            enemy.play();
+
+            enemys.push(enemy);
+        }
+
+        function spawnEnemys() {
+            enemySpawningInterval = setInterval(function () {
+                createEnemy();
+            }, enemySpawningFrequency)
+        }
+
+        function getRndInteger(min, max) {
+            return Math.floor(Math.random() * (max - min)) + min;
+        }
+
+
+
+    </script>
+
+</head>
+
+<body>
+    <div id="gameDiv"></div>
+    <div id="useFont">A</div>
+    <div id="useFont2">A</div>
+</body>
+
+</html>
